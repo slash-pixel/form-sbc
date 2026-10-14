@@ -1,68 +1,35 @@
 import { useState } from 'react';
-import type { Student } from './types/student';
-import { LoginScreen } from './components/LoginScreen';
-import { StudentList } from './components/StudentList';
-import { StudentForm } from './components/StudentForm';
-import { StudentCard } from './components/StudentCard';
+import StudentForm from './components/StudentForm';
+import AdminDashboard from './components/AdminDashboard';
 
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return !!localStorage.getItem('admin_token');
-  });
-  const [currentView, setCurrentView] = useState<'list' | 'form' | 'card'>('list');
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-
-  const handleLogout = () => {
-    localStorage.removeItem('admin_token');
-    setIsAuthenticated(false);
-  };
-
-  if (!isAuthenticated) {
-    return <LoginScreen onLoginSuccess={() => setIsAuthenticated(true)} />;
-  }
-
-  if (currentView === 'form') {
-    return (
-      <StudentForm
-        studentToEdit={selectedStudent}
-        onSave={() => {
-          setSelectedStudent(null);
-          setCurrentView('list');
-        }}
-        onCancel={() => {
-          setSelectedStudent(null);
-          setCurrentView('list');
-        }}
-      />
-    );
-  }
-
-  if (currentView === 'card' && selectedStudent) {
-    return (
-      <StudentCard
-        student={selectedStudent}
-        onBack={() => {
-          setSelectedStudent(null);
-          setCurrentView('list');
-        }}
-        onEdit={() => {
-          setCurrentView('form');
-        }}
-      />
-    );
-  }
+  const [view, setView] = useState<'student' | 'admin'>('student');
 
   return (
-    <StudentList
-      onSelectStudent={(student) => {
-        setSelectedStudent(student);
-        setCurrentView('card');
-      }}
-      onNewStudent={() => {
-        setSelectedStudent(null);
-        setCurrentView('form');
-      }}
-      onLogout={handleLogout}
-    />
+    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+      <header className="bg-white shadow-sm border-b border-gray-200 py-4 px-6 flex justify-between items-center">
+        <h1 className="text-lg font-bold text-blue-900 flex items-center gap-2">
+          🎓 Portail Scolaire des Inscriptions
+        </h1>
+        <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
+          <button 
+            onClick={() => setView('student')} 
+            className={`px-4 py-2 rounded-md text-sm font-medium transition ${view === 'student' ? 'bg-blue-600 text-white shadow' : 'text-gray-600 hover:text-gray-900'}`}
+          >
+            Espace Élève (Formulaire)
+          </button>
+          <button 
+            onClick={() => setView('admin')} 
+            className={`px-4 py-2 rounded-md text-sm font-medium transition ${view === 'admin' ? 'bg-blue-600 text-white shadow' : 'text-gray-600 hover:text-gray-900'}`}
+          >
+            Espace Administrateur
+          </button>
+        </div>
+      </header>
+
+      <main className="py-6">
+        {view === 'student' ? <StudentForm /> : <AdminDashboard />}
+      </main>
+    </div>
   );
 }

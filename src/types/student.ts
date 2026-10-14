@@ -1,12 +1,11 @@
-export interface Student {
+export type Sexe = 'M' | 'F';
+
+export interface Submission {
   id: string;
-  matricule: string;
-  anneeScolaire: string;
-  photoDataUrl?: string;
   classe: string;
   nomEleve: string;
   prenoms: string;
-  sexe: 'M' | 'F';
+  sexe: Sexe;
   age: number;
   redoublant: boolean;
   dateNaissance: string;
@@ -19,11 +18,37 @@ export interface Student {
   professionMere?: string | null;
   telephoneMere?: string | null;
   adresseQuartier: string;
-  nomTuteur?: string | null;
-  contactTuteur?: string | null;
+  nomTuteur: string;
+  contactTuteur: string;
   personneUrgence: string;
   contactUrgence: string;
   observations?: string | null;
-  createdAt?: string;
-  updatedAt?: string;
+  photoUrl: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SubmissionInput {
+  classe: string;
+  nomEleve: string;
+  prenoms: string;
+  sexe: Sexe;
+  age: number;
+  redoublant: boolean;
+  dateNaissance: string;
+  lieuNaissance: string;
+  nationalite: string;
+  nomPere: string;
+  professionPere: string;
+  telephonePere: string;
+  nomMere: string;
+  professionMere: string;
+  telephoneMere: string;
+  adresseQuartier: string;
+  nomTuteur: string;
+  contactTuteur: string;
+  personneUrgence: string;
+  contactUrgence: string;
+  observations: string;
+  photoUrl: string;
 }
