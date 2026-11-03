@@ -2,6 +2,8 @@ import { useState, type FormEvent, type ChangeEvent } from 'react';
 import type { SubmissionInput } from '../types/student';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://formapi-l768.onrender.com/api';
+const CLOUDINARY_CLOUD_NAME = 'dkpckq62b';
+const CLOUDINARY_PRESET = 'm';
 
 export default function StudentForm() {
   const [formData, setFormData] = useState<SubmissionInput>({
@@ -32,6 +34,8 @@ export default function StudentForm() {
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
+  const [uploadingImage, setUploadingImage] = useState<boolean>(false);
+  const [imagePreview, setImagePreview] = useState<string>('');
 
   const validatePhone = (phone: string): boolean => {
     if (!phone) return true;
@@ -49,12 +53,106 @@ export default function StudentForm() {
     }
   };
 
+  /**
+   * Traitement de l'image :
+   * 1. Rognage automatique au format carré 4x4 (Ratio 1:1)
+   * 2. Compression JPEG à 80% de qualité
+   * 3. Upload vers Cloudinary
+   */
+  const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setError('');
+    setUploadingImage(true);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = async () => {
+        // --- ÉTAPE 1 : FORMATTAGE PHOTO D'IDENTITÉ 4x4 ET COMPRESSION ---
+        const canvas = document.createElement('canvas');
+        const TARGET_SIZE = 500; // Taille standard 500x500px pour photo 4x4
+        canvas.width = TARGET_SIZE;
+        canvas.height = TARGET_SIZE;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          setError("Erreur lors du traitement de l'image.");
+          setUploadingImage(false);
+          return;
+        }
+
+        // Calcul du recadrage centré (Crop Carré)
+        let sourceX = 0;
+        let sourceY = 0;
+        let sourceWidth = img.width;
+        let sourceHeight = img.height;
+
+        if (img.width > img.height) {
+          sourceWidth = img.height;
+          sourceX = (img.width - img.height) / 2;
+        } else if (img.height > img.width) {
+          sourceHeight = img.width;
+          sourceY = (img.height - img.width) / 2;
+        }
+
+        // Dessiner l'image recadrée et redimensionnée sur le canvas
+        ctx.drawImage(
+          img,
+          sourceX, sourceY, sourceWidth, sourceHeight,
+          0, 0, TARGET_SIZE, TARGET_SIZE
+        );
+
+        // Export de l'image compressée au format JPEG (qualité 0.8)
+        canvas.toBlob(async (blob) => {
+          if (!blob) {
+            setError("Échec de la compression de l'image.");
+            setUploadingImage(false);
+            return;
+          }
+
+          // Aperçu local immédiat
+          const previewUrl = URL.createObjectURL(blob);
+          setImagePreview(previewUrl);
+
+          // --- ÉTAPE 2 : ENVOI DE L'IMAGE COMPRESSÉE VERS CLOUDINARY ---
+          const cloudinaryData = new FormData();
+          cloudinaryData.append('file', blob, 'photo_4x4.jpg');
+          cloudinaryData.append('upload_preset', CLOUDINARY_PRESET);
+
+          try {
+            const response = await fetch(
+              `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+              { method: 'POST', body: cloudinaryData }
+            );
+
+            const resData = await response.json();
+
+            if (resData.secure_url) {
+              setFormData(prev => ({ ...prev, photoUrl: resData.secure_url }));
+            } else {
+              throw new Error(resData.error?.message || "Erreur lors de l'envoi de la photo.");
+            }
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : "Erreur lors de l'envoi de la photo vers Cloudinary.";
+            setError(msg);
+          } finally {
+            setUploadingImage(false);
+          }
+        }, 'image/jpeg', 0.8);
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
 
-    // Vérification contrainte parent (au moins un parent requis)
+    // Verification contrainte parent (au moins un parent requis)
     if (!formData.nomPere.trim() && !formData.nomMere.trim()) {
       setError("Vous devez renseigner les informations d'au moins un des deux parents (Père ou Mère).");
       return;
@@ -71,6 +169,12 @@ export default function StudentForm() {
     }
     if (!validatePhone(formData.contactTuteur) || !validatePhone(formData.contactUrgence)) {
       setError("Les contacts du tuteur et d'urgence doivent contenir au moins 9 chiffres.");
+      return;
+    }
+
+    // Vérification de la photo d'identité obligatoire
+    if (!formData.photoUrl) {
+      setError("La photo d'identité au format 4x4 est obligatoire.");
       return;
     }
 
@@ -179,9 +283,42 @@ export default function StudentForm() {
           <input type="text" name="contactUrgence" required placeholder="Contact d'urgence" value={formData.contactUrgence} onChange={handleChange} className="border border-gray-300 rounded-md p-2" />
         </div>
 
-        <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-700">URL Photo 4x4</label>
-          <input type="url" name="photoUrl" required placeholder="https://..." value={formData.photoUrl} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md p-2" />
+        {/* Section Upload Photo d'identité 4x4 Cloudinary */}
+        <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <label className="block text-sm font-bold text-gray-700 mb-1">
+            Photo d'identité (Format 4x4 / Carte) *
+          </label>
+          <p className="text-xs text-gray-500 mb-2">
+            La photo sera automatiquement recadrée au format officiel (carré 4x4) et optimisée pour le dossier.
+          </p>
+
+          <input 
+            type="file" 
+            accept="image/*" 
+            required={!formData.photoUrl}
+            onChange={handleImageUpload} 
+            className="block w-full border border-gray-300 rounded-md p-2 text-sm bg-white file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-900 file:text-white hover:file:bg-blue-800 cursor-pointer" 
+          />
+
+          {uploadingImage && (
+            <p className="text-xs text-blue-600 font-semibold mt-2">
+              ⏳ Traitement, compression et transfert vers Cloudinary en cours...
+            </p>
+          )}
+
+          {imagePreview && (
+            <div className="mt-3 flex items-center space-x-4">
+              <img 
+                src={imagePreview} 
+                alt="Aperçu Photo 4x4" 
+                className="w-24 h-24 object-cover rounded-md border-2 border-blue-900 shadow-sm" 
+              />
+              <div>
+                <p className="text-xs text-green-700 font-bold">✓ Photo 4x4 validée & chargée</p>
+                <p className="text-xs text-gray-500">Prête pour le dossier administratif</p>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="mt-4">
@@ -189,8 +326,12 @@ export default function StudentForm() {
           <textarea name="observations" value={formData.observations} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md p-2" rows={2}></textarea>
         </div>
 
-        <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white font-semibold py-3 rounded-md hover:bg-blue-700 transition">
-          {loading ? 'Envoi en cours...' : 'Soumettre la fiche'}
+        <button 
+          type="submit" 
+          disabled={loading || uploadingImage} 
+          className="w-full bg-blue-900 text-white font-semibold py-3 rounded-md hover:bg-blue-800 transition disabled:opacity-50 cursor-pointer"
+        >
+          {loading ? 'Envoi du dossier...' : 'Soumettre la fiche'}
         </button>
       </form>
     </div>
