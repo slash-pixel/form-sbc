@@ -29,9 +29,8 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F5F6FA] text-slate-900 font-sans">
       <header className="bg-[#0B1F4B] border-b-4 border-[#C9A227] py-4 px-4 sm:px-6 flex flex-col sm:flex-row gap-3 sm:gap-0 justify-between items-center print:hidden">
-        <h1 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-          <span aria-hidden="true">🎓</span>
-          <span>
+        <h1 className="text-base sm:text-lg font-bold text-white flex items-center gap-5">
+          <span className="text-white">
             Portail Scolaire
             <span className="block text-xs font-medium text-[#E6C65A] tracking-wide">
               Collège Catholique Saint Charles Borromée
@@ -69,7 +68,7 @@ export default function App() {
                 aria-pressed={section === 'eleves'}
                 className={sectionBtn(section === 'eleves')}
               >
-                📋 Fiche élève
+                 Fiche élève
               </button>
               <button
                 type="button"
@@ -77,7 +76,7 @@ export default function App() {
                 aria-pressed={section === 'examens'}
                 className={sectionBtn(section === 'examens')}
               >
-                🎓 Fiche d'examen
+                 Fiche d'examen
               </button>
             </div>
             {section === 'eleves' ? <StudentForm /> : <ExamForm />}

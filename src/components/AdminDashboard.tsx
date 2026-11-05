@@ -151,8 +151,8 @@ export default function AdminDashboard() {
 
       <div className="flex gap-2 mb-6 print:hidden">
         {([
-          ['eleves', '📋 Fiches élèves'],
-          ['examens', "🎓 Fiches d'examen"],
+          ['eleves', ' Fiches élèves'],
+          ['examens', " Fiches d'examen"],
         ] as const).map(([key, label]) => (
           <button
             key={key}
@@ -225,7 +225,7 @@ export default function AdminDashboard() {
                           onClick={() => setSelectedSubmission(sub)}
                           className="bg-blue-50 text-blue-600 px-3 py-1 rounded text-xs font-medium hover:bg-blue-100 transition"
                         >
-                          📄 Voir la fiche
+                           Voir la fiche
                         </button>
                         <button
                           onClick={() => handleDelete(sub.id)}
